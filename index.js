@@ -14,6 +14,7 @@ app.use(express.static("build"));
 app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :req-body")
 );
+
 app.use(cors());
 
 app.get("/api/persons", async (req, res) => {

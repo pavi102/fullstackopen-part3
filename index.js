@@ -42,10 +42,9 @@ app.get("/info", async (req, res) => {
   `);
 });
 
-app.post("/api/persons", async (req, res) => {
+app.post("/api/persons", async (req, res, next) => {
   const { name, number } = req.body;
-  const existingPerson = await Person.find({ name });
-  console.log(existingPerson);
+  const existingPerson = await Person.findOne({ name });
   if (!name || !number) {
     return res.status(400).json({ error: "All fields must be filled" });
   }
@@ -57,9 +56,13 @@ app.post("/api/persons", async (req, res) => {
     name,
     number,
   });
-
-  const savedPerson = await person.save();
-  return res.status(201).json(savedPerson);
+  try {
+    const savedPerson = await person.save();
+    return res.status(201).json(savedPerson);
+  } catch (err) {
+    console.log(err);
+    next(err);
+  }
 });
 
 app.delete("/api/persons/:id", async (req, res, next) => {
@@ -77,6 +80,8 @@ app.put("/api/persons/:id", async (req, res, next) => {
   try {
     const updatedPerson = await Person.findByIdAndUpdate(req.params.id, newPerson, {
       new: true,
+      runValidators: true,
+      context: "query",
     });
     return res.json(updatedPerson);
   } catch (err) {
@@ -89,6 +94,8 @@ const errorHandler = (error, req, res, next) => {
 
   if (error.name === "CastError") {
     return res.status(400).send({ error: "malformatted id" });
+  } else if (error.name === "ValidationError") {
+    return res.status(400).json({ error: error.message });
   }
 
   next(error);

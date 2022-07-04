@@ -21,7 +21,7 @@ app.get("/api/persons", async (req, res) => {
   return res.json(persons);
 });
 
-app.get("/api/persons/:id", async (req, res) => {
+app.get("/api/persons/:id", async (req, res, next) => {
   try {
     const person = await Person.findById(req.params.id);
     if (!person) {
@@ -29,7 +29,7 @@ app.get("/api/persons/:id", async (req, res) => {
     }
     return res.json(person);
   } catch (err) {
-    res.status(400).send({ error: "malformatted id" });
+    next(err);
   }
 });
 
@@ -44,14 +44,14 @@ app.get("/info", async (req, res) => {
 
 app.post("/api/persons", async (req, res) => {
   const { name, number } = req.body;
-  // const existingPerson = await Person.findOne({ name: name });
-
+  const existingPerson = await Person.find({ name });
+  console.log(existingPerson);
   if (!name || !number) {
     return res.status(400).json({ error: "All fields must be filled" });
   }
-  // if (existingPerson) {
-  //   return res.status(400).json({ error: "Name must be unique" });
-  // }
+  if (existingPerson) {
+    return res.status(409).json({ error: "Person with that name already exists" });
+  }
 
   const person = new Person({
     name,
@@ -61,6 +61,40 @@ app.post("/api/persons", async (req, res) => {
   const savedPerson = await person.save();
   return res.status(201).json(savedPerson);
 });
+
+app.delete("/api/persons/:id", async (req, res, next) => {
+  try {
+    await Person.findByIdAndRemove(req.params.id);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.put("/api/persons/:id", async (req, res, next) => {
+  const { name, number } = req.body;
+  const newPerson = { name, number };
+  try {
+    const updatedPerson = await Person.findByIdAndUpdate(req.params.id, newPerson, {
+      new: true,
+    });
+    return res.json(updatedPerson);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const errorHandler = (error, req, res, next) => {
+  console.error(error.message);
+
+  if (error.name === "CastError") {
+    return res.status(400).send({ error: "malformatted id" });
+  }
+
+  next(error);
+};
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 

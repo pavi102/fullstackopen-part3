@@ -26,7 +26,7 @@ app.get("/api/persons/:id", async (req, res, next) => {
   try {
     const person = await Person.findById(req.params.id);
     if (!person) {
-      return res.status(404).json({ error: `person not found` });
+      return res.status(404).json({ error: "person not found" });
     }
     return res.json(person);
   } catch (err) {
